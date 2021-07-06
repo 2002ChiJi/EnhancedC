@@ -1,6 +1,6 @@
 #pragma once
 #include <string.h>
-#include <malloc.h>
+#include <stdlib.h>
 
 /*
 List
@@ -173,6 +173,7 @@ static struct
 /*
 Vector
 在使用的时候务必清楚自己要往里面存的变量类型
+在用该容器管理指针的时候务必处理好数据所有权的问题
 */
 
 struct VectorData
@@ -192,20 +193,34 @@ void VectorInit(unsigned char ElenmentSize,struct VectorData* vector)
 
 void VectorResize(unsigned int newLength, struct VectorData* vector)
 {
-	vector->VectorHead = realloc(vector->VectorHead, newLength * vector->ElementSize);
+	void* temp = realloc(vector->VectorHead, newLength * vector->ElementSize);
+	if (temp == NULL) abort();
+		
+	vector->VectorHead = temp;
 	vector->Length = newLength;
 	vector->used = 
 		(vector->used > newLength ? newLength : vector->used);
 }
 
+void VectorPushBack(void* Element, struct VectorData* vector)
+{
+	if (vector->used == vector->Length)
+		VectorResize((vector->Length + 1) * 2, vector);
+
+	void* pt = ((char*)vector->VectorHead) + (vector->used * vector->ElementSize);
+	memmove(pt, Element, vector->ElementSize);
+
+	vector->used++;
+}
+
 void VectorInsertA(unsigned int position, const void* Element, struct VectorData* vector)
 {
 	if (vector->used == vector->Length)
-		VectorResize((vector->ElementSize) * 2, vector);
+		VectorResize((vector->Length) * 2, vector);
 
 	int size = vector->ElementSize;
 	char* head = (char*)vector->VectorHead;
-	memmove((head + (position + 1) * size), (head + vector->used * size), (vector->used - position) * size);
+	memmove((head + (position + 1) * size), (head + position * size), (vector->used - position) * size);
 	memmove((head + position * size), Element, size);
 
 	vector->used++;
@@ -214,12 +229,12 @@ void VectorInsertA(unsigned int position, const void* Element, struct VectorData
 void VectorInsertB(unsigned int position, const void* Element, struct VectorData* vector)
 {
 	if (vector->used == vector->Length)
-		VectorResize((vector->ElementSize) * 2, vector);
+		VectorResize((vector->Length) * 2, vector);
 
 	int size = vector->ElementSize;
 	char* head = (char*)vector->VectorHead;
-	memcpy((head + (position + 1) * size), (head + position * size), (vector->used - position) * size);
-	memcpy((head + position * size), Element, size);
+	memmove((head + (position + 2) * size), (head + (position + 1) * size), (vector->used - position) * size);
+	memmove((head + (position + 1) * size), Element, size);
 
 	vector->used++;
 }
@@ -257,21 +272,11 @@ inline void VectorChange(unsigned int position, void* Element, struct VectorData
 	memmove(pt, Element, vector->ElementSize);
 }
 
-void VectorPushBack(void* Element, struct VectorData* vector)
-{
-	if (vector->used == vector->Length)
-		VectorResize((vector->ElementSize) * 2, vector);
-
-	void* pt = ((char*)vector->VectorHead) + (vector->used * vector->ElementSize);
-	memmove(pt, Element, vector->ElementSize);
-
-	vector->used++;
-}
-
 struct 
 {
 	void (*Init)(unsigned char ElenmentSize, struct VectorData* vector);
 	void (*Resize)(unsigned int newLength, struct VectorData* vector);
+	void (*PushBack)(void* Element, struct VectorData* vector);
 	void (*InsertA)(unsigned int position, const void* Element, struct VectorData* vector);
 	void (*InsertB)(unsigned int position, const void* Element, struct VectorData* vector);
 	void (*Remove)(unsigned int position, struct VectorData* vector);
@@ -279,5 +284,74 @@ struct
 	void (*Empty)(struct VectorData* vector);
 	const void* (*At)(unsigned int position, struct VectorData* vector);
 	void (*Change)(unsigned int position, void* Element, struct VectorData* vector);
-	void (*PushBack)(void* Element, struct VectorData* vector);
-}FunctionVector = { &VectorInit,&VectorResize,&VectorInsertA,&VectorInsertB,&VectorRemove,&VectorDestory,&VectorEmpty,&VectorAt,&VectorChange,&VectorPushBack};
+}FunctionVector = { &VectorInit,&VectorResize,&VectorPushBack,&VectorInsertA,&VectorInsertB,&VectorRemove,&VectorDestory,&VectorEmpty,&VectorAt,&VectorChange};
+
+/*
+CPString
+底层采用Vector
+*/
+
+struct CPStrData
+{
+	struct VectorData data;
+};
+
+void CPStrInit(char* str,struct CPStrData* CPStr)
+{
+	FunctionVector.Init(sizeof(char), &(CPStr->data));
+	FunctionVector.Resize(strlen(str), &(CPStr->data));
+	strcpy(CPStr->data.VectorHead, str);
+}
+
+inline void CPStrDestory(struct CPStrData* CPStr)
+{
+	FunctionVector.Destory(&(CPStr->data));
+}
+
+inline void CPStrEmpty(struct CPStrData* CPStr)
+{
+	FunctionVector.Empty(&(CPStr->data));
+}
+
+inline const char* CPStrAt(unsigned int position,struct CPStrData* CPStr)
+{
+	return FunctionVector.At(position, &(CPStr->data));
+}
+
+inline void CPStrChange(unsigned int position, char* Element, struct CPStrData* CPStr)
+{
+	FunctionVector.Change(position, Element, CPStr);
+}
+
+inline void CPStrRemove(unsigned int position, struct CPStrData* CPStr)
+{
+	FunctionVector.Remove(position,&(CPStr->data));
+}
+
+inline CPStrPushBack(char* Element, struct CPStrData* CPStr)
+{
+	FunctionVector.PushBack(Element, &(CPStr->data));
+}
+
+inline CPStrInsertA(unsigned int position, const char* Element, struct CPStrData* CPStr)
+{
+	FunctionVector.InsertA(position,Element,&(CPStr->data));
+}
+
+inline CPStrInsertB(unsigned int position, const char* Element, struct CPStrData* CPStr)
+{
+	FunctionVector.InsertB(position, Element, &(CPStr->data));
+}
+
+inline char* CPStrc_str(struct CPStrData* CPStr)
+{
+	return CPStr->data.VectorHead;
+}
+
+inline void CPStrShorten(unsigned int newLength, struct CPStrData* CPStr)
+{
+	if (newLength >= CPStr->data.used)abort();
+
+	FunctionVector.Resize(newLength, CPStr);
+	FunctionVector.PushBack('\0', &(CPStr->data));
+}
