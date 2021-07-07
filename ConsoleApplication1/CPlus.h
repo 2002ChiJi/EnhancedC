@@ -296,14 +296,11 @@ struct CPStrData
 	struct VectorData data;
 };
 
-void CPStrInit(const char* str,struct CPStrData* CPStr)
+void CPStrInit(char* str,struct CPStrData* CPStr)
 {
 	FunctionVector.Init(sizeof(char), &(CPStr->data));
-	if (str != NULL)
-	{
-		FunctionVector.Resize(strlen(str), &(CPStr->data));
-		strcpy(CPStr->data.VectorHead, str);
-	}
+	FunctionVector.Resize(strlen(str), &(CPStr->data));
+	strcpy(CPStr->data.VectorHead, str);
 }
 
 inline void CPStrDestory(struct CPStrData* CPStr)
@@ -321,10 +318,9 @@ inline const char* CPStrAt(unsigned int position,struct CPStrData* CPStr)
 	return FunctionVector.At(position, &(CPStr->data));
 }
 
-inline void CPStrChange(unsigned int position,const  char* Element, struct CPStrData* CPStr)
+inline void CPStrChange(unsigned int position, char* Element, struct CPStrData* CPStr)
 {
-	for (int num = 0, len = strlen(Element); num < len; num++)
-		FunctionVector.Change(position + num, Element + num, CPStr);
+	FunctionVector.Change(position, Element, CPStr);
 }
 
 inline void CPStrRemove(unsigned int position, struct CPStrData* CPStr)
@@ -334,20 +330,17 @@ inline void CPStrRemove(unsigned int position, struct CPStrData* CPStr)
 
 inline CPStrPushBack(char* Element, struct CPStrData* CPStr)
 {
-	for (int num = 0, len = strlen(Element); num < len; num++)
-		FunctionVector.PushBack(Element + num, &(CPStr->data));
+	FunctionVector.PushBack(Element, &(CPStr->data));
 }
 
 inline CPStrInsertA(unsigned int position, const char* Element, struct CPStrData* CPStr)
 {
-	for (int len = strlen(Element) - 1; len >= 0; len--)
-		FunctionVector.InsertA(position, Element + len, &(CPStr->data));
+	FunctionVector.InsertA(position,Element,&(CPStr->data));
 }
 
 inline CPStrInsertB(unsigned int position, const char* Element, struct CPStrData* CPStr)
 {
-	for (int len = strlen(Element) - 1; len >= 0; len--)
-		FunctionVector.InsertB(position, Element + len, &(CPStr->data));
+	FunctionVector.InsertB(position, Element, &(CPStr->data));
 }
 
 inline char* CPStrc_str(struct CPStrData* CPStr)
@@ -361,89 +354,4 @@ inline void CPStrShorten(unsigned int newLength, struct CPStrData* CPStr)
 
 	FunctionVector.Resize(newLength, CPStr);
 	FunctionVector.PushBack('\0', &(CPStr->data));
-}
-
-inline void CPStrCpy(const char* str, struct CPStrData* CPStr)		//复制后原CPStr的字符串会被清空
-{
-	FunctionVector.Destory(CPStr);
-	CPStrInit(str,CPStr);
-}
-
-void CPStrCat(const char* str, struct CPStrData* CPStr)
-{
-	if (CPStr->data.Length < CPStr->data.used + strlen(str) - 1)
-		FunctionVector.Resize(CPStr->data.used + strlen(str) - 1, &(CPStr->data));
-
-	char* head = CPStr->data.VectorHead;
-	memcpy(head + CPStr->data.used - 1, str, strlen(str));
-	CPStr->data.used += (strlen(str) - 1);
-}
-
-inline const char* CPStrFind(const unsigned start,const char* str, struct CPStrData* CPStr)
-{
-	return strstr((char*)(CPStr->data.VectorHead) + start, str);
-}
-
-inline unsigned CPStrCount(const char* str, struct CPStrData* CPStr)
-{
-	int start = 0, count = 0;
-	for (; strstr((char*)(CPStr->data.VectorHead) + start, str); count++);
-	return count;
-}
-
-inline void lower(struct CPStrData* CPStr)
-{
-	char* head = CPStr->data.VectorHead;
-	for (; (*head) != '\0'; head++)
-		if ((*head) >= 65 && (*head) <= 90) (*head) += 32;
-}
-
-inline upper(struct CPStrData* CPStr)
-{
-	char* head = CPStr->data.VectorHead;
-	for (; (*head) != '\0'; head++)
-		if ((*head) >= 97 && (*head) <= 122) (*head) -= 32;
-}
-
-void CPStrRelpace(const char* from, const char* to, struct CPStrData* CPStr)
-{
-	struct CPStrData buffer;
-	int lenFrom = strlen(from);
-	char* head = CPStr->data.VectorHead;
-
-	for (int num = 0; num < CPStr->data.used; num++)
-	{
-		if (!strncmp(head + num, from, strlen(from)))
-		{
-			CPStrCat(to, &buffer);
-			num += lenFrom - 1;
-		}
-		else
-			CPStrPushBack(head + num, &buffer);
-	}
-
-	CPStrCpy(buffer.data.VectorHead, CPStr);
-	CPStrDestory(&buffer);
-}
-
-inline int CPStrLen(struct CPStrData* CPStr)
-{
-	return CPStr->data.used;
-}
-
-char* CPStrSplit(const unsigned from, const unsigned to, struct CPStrData* CPStr)
-{
-	char* ret = malloc(from - to + 1),
-		* head = CPStr->data.VectorHead,
-		* end = (char*)(CPStr->data.VectorHead) + to,
-		* begin = (char*)(CPStr->data.VectorHead) + from;
-
-	do
-	{
-		ret[begin - head] = *begin;
-		begin++;
-	} while (begin <= end);
-	ret[from - to] = '\0';
-
-	return ret;
 }
