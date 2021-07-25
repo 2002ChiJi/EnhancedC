@@ -1,15 +1,20 @@
 #include "CPlus.h"
 #include <stdio.h>
 
+/*
+已在GitHub上备份
+请确保使用的编译器支持C99标准哦^_^
+谢谢老师赏光
+*/
+
+void Bar(CPString* str)
+{
+	FunctionCPStr.Transform(str,FALSE);
+}
+
 int main()
 {
-	int a = 10086;
-
-	struct VectorData VD;
-	FunctionVector.Init(sizeof(int), &VD);
-
-	for (int num = 0; num < 10; num++)
-		FunctionVector.PushBack(&num, &VD);
-	for (int num = 0; num < VD.Length; num++)		
-		printf("%d\n",*(int*)FunctionVector.At(num, &VD));
+	CPFile* file = FunctionFILE.Init("E:\\1.txt");
+	FunctionGC.Add(FunctionFILE.Destory, file);
+	FunctionFILE.Save(file);
 }
